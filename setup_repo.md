@@ -60,10 +60,10 @@ The container automatically:
 The `gradlew` script and its companion JAR are not committed to the repo (the JAR is a binary). Generate them once from inside the container terminal:
 
 ```bash
-wget -q https://services.gradle.org/distributions/gradle-8.8-bin.zip -O /tmp/gradle.zip
+wget -q https://services.gradle.org/distributions/gradle-8.9-bin.zip -O /tmp/gradle.zip
 unzip -q /tmp/gradle.zip -d /opt/gradle
 cd /workspaces/sleep_talker_recorder
-/opt/gradle/gradle-8.8/bin/gradle wrapper --gradle-version 8.8
+/opt/gradle/gradle-8.9/bin/gradle wrapper --gradle-version 8.9 --gradle-distribution-path third_party/gradle/wrapper
 chmod +x gradlew
 ```
 
@@ -181,16 +181,31 @@ If you add more sleep-talking recordings, drop them in `tests/samples/` and add 
 
 ## Vosk Speech-to-Text Model
 
-The app uses Vosk for offline speech recognition. The model is not committed to the repo (too large).
+The app uses Vosk for offline speech recognition. Models are not committed to the repo (too large for git).
 
-**Download the small English model (~50 MB):**
+The active model is set in `gradle.properties`:
+```properties
+vosk.model=vosk-model-it   # folder name under app/src/main/assets/
+```
+
+This value is baked into `BuildConfig.VOSK_MODEL_NAME` at compile time. To switch language, change the property and drop the corresponding folder under `assets/`.
+
+**Download the Italian model (default, ~50 MB):**
+```bash
+wget https://alphacephei.com/vosk/models/vosk-model-small-it-0.22.zip -O /tmp/vosk-model.zip
+unzip /tmp/vosk-model.zip -d app/src/main/assets/
+mv app/src/main/assets/vosk-model-small-it-0.22 app/src/main/assets/vosk-model-it
+```
+
+**Switch to English:**
 ```bash
 wget https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip -O /tmp/vosk-model.zip
 unzip /tmp/vosk-model.zip -d app/src/main/assets/
 mv app/src/main/assets/vosk-model-small-en-us-0.15 app/src/main/assets/vosk-model-en
+# then set vosk.model=vosk-model-en in gradle.properties
 ```
 
-The app expects the model at `assets/vosk-model-en/`. The folder is gitignored — each developer downloads it once.
+All model folders under `assets/vosk-model-*/` are gitignored — each developer downloads once.
 
 ---
 

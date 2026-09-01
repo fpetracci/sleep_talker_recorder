@@ -18,7 +18,7 @@ local.properties
 .vscode/
 
 # Vosk models (too large to commit)
-app/src/main/assets/vosk-model-en/
+app/src/main/assets/vosk-model-*/
 tests/models/
 
 # Python (uv)

@@ -9,8 +9,13 @@
       "jdkDistribution": "ms"
     }
   },
+  "runArgs": ["--device=/dev/kvm"],
+  "containerEnv": {
+    "DISPLAY": "${localEnv:DISPLAY}"
+  },
   "mounts": [
-    "source=sleep-talker-gradle-cache,target=/root/.gradle,type=volume"
+    "source=sleep-talker-gradle-cache,target=/root/.gradle,type=volume",
+    "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached"
   ],
   "customizations": {
     "vscode": {
@@ -22,7 +27,7 @@
         "usernamehw.errorlens"
       ],
       "settings": {
-        "java.jdt.ls.java.home": "/usr/local/lib/jvm/msopenjdk-17",
+        "java.jdt.ls.java.home": "${containerEnv:JAVA_HOME}",
         "kotlin.languageServer.enabled": true
       }
     }
