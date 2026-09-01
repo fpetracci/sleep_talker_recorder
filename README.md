@@ -1,71 +1,137 @@
 # Sleep Talker Recorder
 
-An Android app that automatically records and transcribes sleep talking — fully offline, no cloud required.
+Android app that records and transcribes sleep talking. Fully offline — no cloud, no internet.
 
-## How it works
+**How it works:** on session start, the app listens silently for a configurable settling period (default 15 min) to calibrate the ambient noise threshold. After that it monitors continuously: when volume crosses the threshold it starts recording (with a pre-buffer so word onsets aren't clipped), stops after a configurable silence window, runs Vosk STT on the clip, saves it as `"first words_HH:MM.wav"` if words are found, discards it otherwise.
 
-1. **Settling phase** — when you start the session, the app listens silently for a configurable period (default 15 min) to measure ambient noise and auto-calibrate the detection threshold.
-2. **Monitoring phase** — the app continuously watches audio amplitude. When it crosses the threshold, it starts saving audio (including a pre-buffer so the start of a word is never clipped).
-3. **Silence detection** — once audio drops back below the threshold for a configurable duration, the recording stops.
-4. **Transcription** — the recording is passed to an on-device Vosk speech recogniser. If words are detected, the file is saved as `"first words_HH:MM.wav"`. If nothing was recognised, the file is discarded.
+**Stack:** Kotlin · Vosk (offline STT) · Android Foreground Service · Room DB · min SDK 26
 
-All processing happens locally on the device. No internet connection is used.
+---
 
-## Tech stack
+## Setup
 
-- **Language:** Kotlin
-- **Min SDK:** 26 (Android 8.0) — tested on Android 16
-- **Speech recognition:** [Vosk](https://alphacephei.com/vosk/) (offline, on-device)
-- **Background recording:** Android Foreground Service + WakeLock
-- **Database:** Room (recordings metadata)
+### 1. Prerequisites (host)
 
-## Project structure
-
-```
-app/src/main/
-  kotlin/com/sleeptalker/app/
-    MainActivity.kt          # Entry point, start/stop UI
-    RecorderService.kt       # Foreground service, audio loop, state machine
-    RingBuffer.kt            # Rolling pre-buffer for audio chunks
-    AmplitudeAnalyzer.kt     # RMS computation
-    WavWriter.kt             # PCM → WAV file
-    VoskTranscriber.kt       # Vosk STT wrapper
-    RecordingRepository.kt   # Room DB access
-  res/
-    layout/activity_main.xml
-    values/
+**Docker** (Fedora):
+```bash
+sudo dnf install docker
+sudo systemctl enable --now docker
+sudo usermod -aG docker $USER   # log out and back in
 ```
 
-## Getting started
+**VS Code + Dev Containers extension:**
+```bash
+sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc
+sudo sh -c 'echo -e "[code]\nname=Visual Studio Code\nbaseurl=https://packages.microsoft.com/yumrepos/vscode\nenabled=1\ngpgcheck=1\ngpgkey=https://packages.microsoft.com/keys/microsoft.asc" > /etc/yum.repos.d/vscode.repo'
+sudo dnf install code
+```
+Then in VS Code: Extensions → search **Dev Containers** → Install.
 
-See [setup_repo.md](setup_repo.md) for full environment setup instructions (devcontainer + ADB wireless).
-
-**Short version** — if your environment is already set up:
+### 2. Open in container
 
 ```bash
-# First time only: bootstrap the Gradle wrapper
-wget -q https://services.gradle.org/distributions/gradle-8.8-bin.zip -O /tmp/gradle.zip
+git clone <repo-url> && cd sleep_talker_recorder
+code .
+```
+
+VS Code will prompt **Reopen in Container** — click it. First open takes ~5 min (downloads Android SDK + uv deps). The container has Java 17, Android SDK 36, ffmpeg, uv, and the Android emulator binary ready.
+
+### 3. Bootstrap Gradle wrapper (first time only)
+
+The wrapper JAR is a binary and not committed. Run once inside the container terminal:
+
+```bash
+wget -q https://services.gradle.org/distributions/gradle-8.9-bin.zip -O /tmp/gradle.zip
 unzip -q /tmp/gradle.zip -d /opt/gradle
-/opt/gradle/gradle-8.8/bin/gradle wrapper --gradle-version 8.8
+/opt/gradle/gradle-8.9/bin/gradle wrapper --gradle-version 8.9
 chmod +x gradlew
-
-# Build
-./gradlew assembleDebug
-
-# Deploy
-./gradlew installDebug
 ```
 
-## ADB wireless (quick reference)
+Then commit the generated files so other contributors skip this step:
+```bash
+git add gradlew third_party/gradle/wrapper/gradle-wrapper.jar third_party/gradle/wrapper/gradle-wrapper.properties
+git commit -m "Add Gradle wrapper"
+```
+
+### 4. Download Vosk model
+
+The model is gitignored (too large). Download it once into `app/src/main/assets/`:
 
 ```bash
-# Pair once
-adb pair <phone-ip>:<pairing-port>   # code shown in Developer Options → Wireless Debugging
-
-# Connect each session
-adb connect <phone-ip>:<port>
-adb devices
-
-# Logs
-adb logcat -s SleepTalker
+wget https://alphacephei.com/vosk/models/vosk-model-small-it-0.22.zip -O /tmp/vosk-model.zip
+unzip /tmp/vosk-model.zip -d app/src/main/assets/
+mv app/src/main/assets/vosk-model-small-it-0.22 app/src/main/assets/vosk-model-it
 ```
+
+To switch language, change `vosk.model=vosk-model-it` in `gradle.properties` and drop the new model folder under `assets/`. The value is baked into `BuildConfig.VOSK_MODEL_NAME` at compile time.
+
+---
+
+## Build & deploy
+
+```bash
+./gradlew assembleDebug                          # build
+./gradlew installDebug                           # build + install on connected device
+```
+
+APK output: `app/build/outputs/apk/debug/app-debug.apk`
+
+---
+
+## ADB wireless
+
+Settings → About Phone → tap **Build Number** 7× → Developer Options → **Wireless Debugging** → **Pair device with pairing code**.
+
+```bash
+adb pair <ip>:<pairing-port>     # once — enter the 6-digit code
+adb connect <ip>:<port>          # each session — port shown in Wireless Debugging
+adb devices                      # confirm device is listed
+adb logcat -s SleepTalker        # live logs
+```
+
+---
+
+## Testing
+
+### Kotlin unit tests (JVM, no device needed)
+```bash
+./gradlew test           # or: make test-unit
+```
+
+Tests live in `app/src/test/`. Cover pure logic: `RingBuffer`, `AmplitudeAnalyzer`.
+
+### Python tests (Vosk model + audio pipeline validation)
+```bash
+make test                # downloads Italian Vosk model if missing, then runs pytest
+uv run pytest tests/ -v  # run directly (model must already be present)
+uv run python tests/dry_run.py   # print RMS + transcript for the sample recording
+```
+
+To add a Python dependency: `uv add --group test <package>`
+
+### Emulator (UI, first-time setup)
+```bash
+# On host — allow X11 from container (once per session)
+xhost +local:docker
+
+# In container
+make emulator-setup      # downloads ~1 GB system image, creates AVD (once)
+make emulator            # launches emulator (Android 35, x86_64)
+```
+
+Requires `/dev/kvm` — ensure CPU virtualisation is enabled in BIOS.
+
+---
+
+## Quick reference
+
+| Task | Command |
+|---|---|
+| Build | `./gradlew assembleDebug` |
+| Install on phone | `./gradlew installDebug` |
+| Unit tests | `make test-unit` |
+| All tests | `make test` |
+| Dry-run transcript | `uv run python tests/dry_run.py` |
+| Emulator | `make emulator` |
+| Logs | `adb logcat -s SleepTalker` |
+| Clean | `./gradlew clean` |
