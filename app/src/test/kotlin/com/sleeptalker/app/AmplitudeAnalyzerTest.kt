@@ -47,7 +47,7 @@ class AmplitudeAnalyzerTest {
     @Test
     fun `odd byte count - trailing byte ignored`() {
         // 3 bytes: only first 2 form a valid sample, last is ignored
-        val pcm = byteArrayOf(0x00, 0x40, 0xFF) // one sample of 16384, one orphan byte
+        val pcm = byteArrayOf(0x00, 0x40, 0xFF.toByte()) // one sample of 16384, one orphan byte
         val result = AmplitudeAnalyzer.rms(pcm)
         assert(result > 0f) { "Expected RMS > 0, got $result" }
     }
