@@ -34,7 +34,7 @@ git clone <repo-url> && cd sleep_talker_recorder
 code .
 ```
 
-VS Code will prompt **Reopen in Container** — click it. First open takes ~5 min (downloads Android SDK + uv deps). The container has Java 17, Android SDK 36, ffmpeg, uv, and the Android emulator binary ready.
+VS Code will prompt **Reopen in Container** — click it. First open takes ~5 min (downloads Android SDK + uv deps). The container has Java 17, Android SDK 36, ffmpeg, and uv ready.
 
 ### 3. Bootstrap Gradle wrapper (first time only)
 
@@ -47,7 +47,7 @@ unzip -q /tmp/gradle.zip -d /opt/gradle
 chmod +x gradlew
 ```
 
-Then commit the generated files so other contributors skip this step:
+Then commit so other contributors skip this step:
 ```bash
 git add gradlew third_party/gradle/wrapper/gradle-wrapper.jar third_party/gradle/wrapper/gradle-wrapper.properties
 git commit -m "Add Gradle wrapper"
@@ -55,7 +55,7 @@ git commit -m "Add Gradle wrapper"
 
 ### 4. Download Vosk model
 
-The model is gitignored (too large). Download it once into `app/src/main/assets/`:
+The model is gitignored (too large). Download once into `app/src/main/assets/`:
 
 ```bash
 wget https://alphacephei.com/vosk/models/vosk-model-small-it-0.22.zip -O /tmp/vosk-model.zip
@@ -69,24 +69,50 @@ To switch language, change `vosk.model=vosk-model-it` in `gradle.properties` and
 
 ## Build & deploy
 
-```bash
-./gradlew assembleDebug                          # build
-./gradlew installDebug                           # build + install on connected device
-```
-
-APK output: `app/build/outputs/apk/debug/app-debug.apk`
-
----
-
-## ADB wireless
+**To a physical phone** (wireless ADB):
 
 Settings → About Phone → tap **Build Number** 7× → Developer Options → **Wireless Debugging** → **Pair device with pairing code**.
 
 ```bash
 adb pair <ip>:<pairing-port>     # once — enter the 6-digit code
-adb connect <ip>:<port>          # each session — port shown in Wireless Debugging
+adb connect <ip>:<port>          # each session
 adb devices                      # confirm device is listed
-adb logcat -s SleepTalker        # live logs
+./gradlew installDebug           # build + install
+```
+
+**To the emulator** — the emulator runs on the host (native GPU + display), the container deploys via ADB.
+
+One-time host setup:
+```bash
+sudo dnf install android-tools
+mkdir -p ~/android-sdk/cmdline-tools
+wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O /tmp/cmdtools.zip
+unzip /tmp/cmdtools.zip -d /tmp/cmdtools-raw
+mv /tmp/cmdtools-raw/cmdline-tools ~/android-sdk/cmdline-tools/latest
+```
+
+Add to `~/.zshrc`:
+```bash
+export ANDROID_HOME=$HOME/android-sdk
+export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator
+```
+
+```bash
+source ~/.zshrc
+yes | sdkmanager --licenses
+sdkmanager "platform-tools" "emulator" "system-images;android-35;google_apis;x86_64"
+avdmanager create avd -n SleepTalkerAVD -k "system-images;android-35;google_apis;x86_64"
+```
+
+Each session:
+```bash
+# On host
+emulator -avd SleepTalkerAVD &
+adb kill-server && adb -a nodaemon server start &
+
+# In container (ANDROID_ADB_SERVER_ADDRESS is pre-configured)
+adb devices          # should list emulator-5554
+make install         # build + deploy to emulator
 ```
 
 ---
@@ -95,43 +121,29 @@ adb logcat -s SleepTalker        # live logs
 
 ### Kotlin unit tests (JVM, no device needed)
 ```bash
-./gradlew test           # or: make test-unit
+make test-unit       # or: ./gradlew test
 ```
+Tests in `app/src/test/`. Cover pure logic: `RingBuffer`, `AmplitudeAnalyzer`.
 
-Tests live in `app/src/test/`. Cover pure logic: `RingBuffer`, `AmplitudeAnalyzer`.
-
-### Python tests (Vosk model + audio pipeline validation)
+### Python tests (Vosk model + audio pipeline)
 ```bash
-make test                # downloads Italian Vosk model if missing, then runs pytest
-uv run pytest tests/ -v  # run directly (model must already be present)
+make test            # downloads Italian Vosk model if missing, then runs pytest
+uv run pytest tests/ -v
 uv run python tests/dry_run.py   # print RMS + transcript for the sample recording
 ```
-
-To add a Python dependency: `uv add --group test <package>`
-
-### Emulator (UI, first-time setup)
-```bash
-# On host — allow X11 from container (once per session)
-xhost +local:docker
-
-# In container
-make emulator-setup      # downloads ~1 GB system image, creates AVD (once)
-make emulator            # launches emulator (Android 35, x86_64)
-```
-
-Requires `/dev/kvm` — ensure CPU virtualisation is enabled in BIOS.
+To add a dependency: `uv add --group test <package>`
 
 ---
 
 ## Quick reference
 
-| Task | Command |
+| Task | Command (in container) |
 |---|---|
-| Build | `./gradlew assembleDebug` |
+| Build APK | `./gradlew assembleDebug` |
 | Install on phone | `./gradlew installDebug` |
-| Unit tests | `make test-unit` |
+| Install on emulator | `make install` |
+| Kotlin unit tests | `make test-unit` |
 | All tests | `make test` |
 | Dry-run transcript | `uv run python tests/dry_run.py` |
-| Emulator | `make emulator` |
-| Logs | `adb logcat -s SleepTalker` |
+| Live logs | `adb logcat -s SleepTalker` |
 | Clean | `./gradlew clean` |

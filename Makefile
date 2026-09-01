@@ -1,4 +1,10 @@
-.PHONY: test test-python test-unit download-model emulator-setup emulator
+.PHONY: test test-python test-unit download-model install
+
+# ── Build & install ───────────────────────────────────────────────────────────
+
+install:
+	./gradlew assembleDebug
+	adb -s emulator-5554 install -r app/build/outputs/apk/debug/app-debug.apk
 
 # ── Python / Vosk tests ───────────────────────────────────────────────────────
 
@@ -30,19 +36,3 @@ test-unit:
 
 test: test-python test-unit
 
-# ── Android Emulator ──────────────────────────────────────────────────────────
-
-AVD_NAME    = SleepTalkerAVD
-SYSTEM_IMG  = system-images;android-35;google_apis;x86_64
-
-emulator-setup:
-	sdkmanager "$(SYSTEM_IMG)"
-	@if ! avdmanager list avd | grep -q "$(AVD_NAME)"; then \
-		echo "Creating AVD $(AVD_NAME)..."; \
-		echo no | avdmanager create avd -n $(AVD_NAME) -k "$(SYSTEM_IMG)" --force; \
-	else \
-		echo "AVD $(AVD_NAME) already exists"; \
-	fi
-
-emulator: emulator-setup
-	emulator -avd $(AVD_NAME) -no-audio &

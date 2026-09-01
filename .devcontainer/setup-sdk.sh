@@ -8,8 +8,7 @@ echo "Installing Android SDK components..."
 sdkmanager \
     "platform-tools" \
     "platforms;android-36" \
-    "build-tools;36.0.0" \
-    "emulator"
+    "build-tools;36.0.0"
 
 echo "Android SDK setup complete."
 sdkmanager --list_installed

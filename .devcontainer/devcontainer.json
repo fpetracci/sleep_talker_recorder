@@ -9,13 +9,12 @@
       "jdkDistribution": "ms"
     }
   },
-  "runArgs": ["--device=/dev/kvm"],
   "containerEnv": {
-    "DISPLAY": "${localEnv:DISPLAY}"
+    "ANDROID_ADB_SERVER_ADDRESS": "172.17.0.1",
+    "ANDROID_ADB_SERVER_PORT": "5037"
   },
   "mounts": [
-    "source=sleep-talker-gradle-cache,target=/root/.gradle,type=volume",
-    "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached"
+    "source=sleep-talker-gradle-cache,target=/root/.gradle,type=volume"
   ],
   "customizations": {
     "vscode": {
