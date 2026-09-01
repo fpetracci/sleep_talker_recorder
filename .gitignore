@@ -1,0 +1,30 @@
+# claude
+.claude
+
+# Gradle
+.gradle/
+build/
+**/build/
+
+# Android
+*.apk
+*.aab
+*.ap_
+local.properties
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Vosk models (too large to commit)
+app/src/main/assets/vosk-model-en/
+tests/models/
+
+# Python (uv)
+*/__pycache__/
+.venv/
+.pytest_cache/
+
+# Converted test audio (generated at test time)
+tests/samples/*.wav

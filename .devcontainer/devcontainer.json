@@ -1,0 +1,32 @@
+{
+  "name": "Sleep Talker Recorder — Android",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "17",
+      "jdkDistribution": "ms"
+    }
+  },
+  "mounts": [
+    "source=sleep-talker-gradle-cache,target=/root/.gradle,type=volume"
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "mathiasfrohlich.Kotlin",
+        "fwcd.kotlin",
+        "redhat.java",
+        "vscjava.vscode-java-pack",
+        "usernamehw.errorlens"
+      ],
+      "settings": {
+        "java.jdt.ls.java.home": "/usr/local/lib/jvm/msopenjdk-17",
+        "kotlin.languageServer.enabled": true
+      }
+    }
+  },
+  "postCreateCommand": "bash .devcontainer/setup-sdk.sh",
+  "remoteUser": "root"
+}
