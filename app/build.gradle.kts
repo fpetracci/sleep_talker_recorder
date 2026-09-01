@@ -13,6 +13,9 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
+
+        val voskModel = rootProject.findProperty("vosk.model") as String? ?: "vosk-model-it"
+        buildConfigField("String", "VOSK_MODEL_NAME", "\"$voskModel\"")
     }
 
     buildTypes {
@@ -32,6 +35,7 @@ android {
 
     buildFeatures {
         viewBinding = true
+        buildConfig = true
     }
 }
 
@@ -40,4 +44,6 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
     implementation(libs.androidx.constraintlayout)
+
+    testImplementation(libs.junit)
 }

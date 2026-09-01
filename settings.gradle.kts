@@ -11,6 +11,11 @@ dependencyResolutionManagement {
         google()
         mavenCentral()
     }
+    versionCatalogs {
+        create("libs") {
+            from(files("third_party/gradle/libs.versions.toml"))
+        }
+    }
 }
 
 rootProject.name = "SleepTalker"
