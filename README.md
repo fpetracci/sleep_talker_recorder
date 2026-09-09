@@ -2,7 +2,7 @@
 
 Android app that records and transcribes sleep talking. Fully offline — no cloud, no internet.
 
-**How it works:** on session start, the app listens silently for a configurable settling period (default 15 min) to calibrate the ambient noise threshold. After that it monitors continuously: when volume crosses the threshold it starts recording (with a pre-buffer so word onsets aren't clipped), stops after a configurable silence window, runs Vosk STT on the clip, saves it as `"first words_HH:MM.wav"` if words are found, discards it otherwise.
+**How it works:** on session start, the app listens silently for a configurable settling period (default 15 min) to calibrate the ambient noise threshold. After that it monitors continuously: when volume crosses the threshold it starts recording (with a pre-buffer so word onsets aren't clipped), stops after a configurable silence window, runs Vosk STT on the clip, and — if words were found — saves it as `"<the words spoken>_HHmmss.wav"` (e.g. `"ciao_sono_francesco_131103.wav"`); discards it otherwise.
 
 **Stack:** Kotlin · Vosk (offline STT) · Android Foreground Service · Room DB · min SDK 26
 

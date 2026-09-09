@@ -1,21 +1,12 @@
 package com.sleeptalker.app.model
 
-/**
- * A single saved sleep-talk recording.
- *
- * TODO: this is currently populated with mock data in [com.sleeptalker.app.HomeActivity].
- * Once the Room DB from the README's architecture exists, load these from it instead
- * (one row per "first words_HH:MM.wav" file the recording pipeline saved).
- */
+/** A single saved sleep-talk recording, as loaded from [com.sleeptalker.app.data.ClipRepository]. */
 data class Clip(
     val id: Long,
-    /** e.g. "first words_03:12" — filename without extension. */
+    /** The words actually spoken plus a timestamp, e.g. "ciao sono francesco · 13:11". */
     val label: String,
     val timestamp: String,
     val transcript: String,
-    /**
-     * Either "asset://<name under assets/>" (used for the bundled tests/samples demo
-     * clips) or an absolute filesystem path. Null means no audio is available.
-     */
+    /** Absolute filesystem path to the saved .wav. Null means no audio is available. */
     val filePath: String? = null,
 )

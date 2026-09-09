@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -9,10 +10,10 @@
 
     <TextView
         android:id="@+id/textClipLabel"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textAppearance="?attr/textAppearanceHeadline5"
-        tools:text="first words_03:12" />
+        tools:text="ciao sono francesco · 13:11" />
 
     <View
         android:layout_width="match_parent"
@@ -79,8 +80,17 @@
         android:id="@+id/buttonPlayPause"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
+        android:layout_marginBottom="8dp"
         android:text="@string/playback_play" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/buttonShare"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton.Icon"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        app:icon="@drawable/ic_share"
+        android:text="@string/playback_share" />
 
     <TextView
         android:layout_width="wrap_content"

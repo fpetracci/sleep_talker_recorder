@@ -8,7 +8,9 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.widget.SeekBar
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.FileProvider
 import com.sleeptalker.app.audio.AudioEnvelope
 import com.sleeptalker.app.databinding.ActivityPlaybackBinding
 import java.io.File
@@ -59,6 +61,7 @@ class PlaybackActivity : AppCompatActivity() {
 
         setUpPlayback(filePath)
         setUpVolumeBoost()
+        setUpShare(filePath)
     }
 
     private fun setUpPlayback(filePath: String?) {
@@ -140,6 +143,63 @@ class PlaybackActivity : AppCompatActivity() {
             setTargetGain(gainMillibels)
             enabled = gainMillibels > 0
         }
+    }
+
+    /**
+     * A real recording's [filePath] is already a shareable app-private file; a
+     * bundled demo clip's "asset://" path isn't a real file at all, so it's copied
+     * out to the cache dir first. Either way, sharing needs a `content://` URI
+     * (FileProvider) — a bare file path can't cross into another app on modern
+     * Android.
+     */
+    private fun setUpShare(filePath: String?) {
+        if (filePath == null) {
+            binding.buttonShare.isEnabled = false
+            return
+        }
+        binding.buttonShare.setOnClickListener {
+            Thread {
+                val file = resolveShareableFile(filePath)
+                runOnUiThread {
+                    if (file == null) {
+                        Toast.makeText(this, R.string.playback_share_unavailable, Toast.LENGTH_SHORT).show()
+                    } else {
+                        shareFile(file)
+                    }
+                }
+            }.start()
+        }
+    }
+
+    private fun resolveShareableFile(filePath: String): File? {
+        if (!filePath.startsWith(AudioEnvelope.ASSET_SCHEME)) return File(filePath).takeIf { it.exists() }
+
+        val name = filePath.removePrefix(AudioEnvelope.ASSET_SCHEME)
+        val sharedDir = File(cacheDir, "shared").apply { mkdirs() }
+        val outFile = File(sharedDir, name.substringAfterLast('/'))
+        if (!outFile.exists()) {
+            try {
+                assets.open(name).use { input -> outFile.outputStream().use { input.copyTo(it) } }
+            } catch (e: java.io.IOException) {
+                return null
+            }
+        }
+        return outFile
+    }
+
+    private fun shareFile(file: File) {
+        val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
+        val mimeType = when (file.extension.lowercase()) {
+            "wav" -> "audio/wav"
+            "mp4", "m4a" -> "audio/mp4"
+            else -> "audio/*"
+        }
+        val sendIntent = Intent(Intent.ACTION_SEND).apply {
+            type = mimeType
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        startActivity(Intent.createChooser(sendIntent, getString(R.string.playback_share_chooser_title)))
     }
 
     override fun onStop() {

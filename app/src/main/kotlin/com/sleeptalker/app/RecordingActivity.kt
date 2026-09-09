@@ -1,52 +1,38 @@
 package com.sleeptalker.app
 
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.ServiceConnection
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
+import android.os.IBinder
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.sleeptalker.app.databinding.ActivityRecordingBinding
-import kotlin.random.Random
+import com.sleeptalker.app.recording.Phase
+import com.sleeptalker.app.recording.RecordingService
+import com.sleeptalker.app.recording.RecordingUiState
 
 /**
- * Recording screen: shows the session's current phase, a live waveform, and elapsed time.
- *
- * TODO: this whole screen currently drives itself off a [Handler]-based simulation
- * (fake amplitude samples, a fixed settling timer) because the real Foreground
- * Service + AudioRecord pipeline described in the README doesn't exist yet. Once it
- * does, replace [pushWaveformSample]/[advanceOneSecond] with a listener/observer on
- * that service's state (settling countdown, [com.sleeptalker.app.AmplitudeAnalyzer]
- * RMS values, and settling → monitoring → recording transitions) instead of
- * generating them here.
+ * Recording screen: binds to [RecordingService] (already started as a foreground
+ * service by [HomeActivity]) and mirrors its [RecordingUiState] — phase, live
+ * waveform, elapsed time.
  */
 class RecordingActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityRecordingBinding
-    private val handler = Handler(Looper.getMainLooper())
-    private val random = Random(System.currentTimeMillis())
-
-    private var waitSecondsLeft = 0
-    private var elapsedSeconds = 0
-    private var phase = Phase.SETTLING
-    private var recordingPhaseTicksLeft = 0
+    private var service: RecordingService? = null
     private val liveSamples = ArrayDeque<Float>()
+    private var lastClipsSaved = 0
 
-    private enum class Phase { SETTLING, MONITORING, RECORDING }
-
-    /** Drives the waveform — runs often, so it looks "live". */
-    private val waveformTick = object : Runnable {
-        override fun run() {
-            pushWaveformSample()
-            handler.postDelayed(this, WAVEFORM_TICK_MILLIS)
+    private val connection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName, binder: IBinder) {
+            service = (binder as RecordingService.LocalBinder).getService()
+            service?.uiState?.observe(this@RecordingActivity) { state -> render(state) }
         }
-    }
 
-    /** Drives the clock and phase transitions — runs once a second. */
-    private val clockTick = object : Runnable {
-        override fun run() {
-            advanceOneSecond()
-            handler.postDelayed(this, 1000L)
+        override fun onServiceDisconnected(name: ComponentName) {
+            service = null
         }
     }
 
@@ -55,64 +41,44 @@ class RecordingActivity : AppCompatActivity() {
         binding = ActivityRecordingBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        waitSecondsLeft = intent.getIntExtra(EXTRA_WAIT_MINUTES, DEFAULT_WAIT_MINUTES) * 60
-        updateStatusText()
-        binding.buttonStop.setOnClickListener { finish() }
+        binding.buttonStop.setOnClickListener {
+            stopService(Intent(this, RecordingService::class.java))
+            finish()
+        }
     }
 
     override fun onStart() {
         super.onStart()
-        handler.post(waveformTick)
-        handler.post(clockTick)
+        bindService(Intent(this, RecordingService::class.java), connection, Context.BIND_AUTO_CREATE)
     }
 
     override fun onStop() {
         super.onStop()
-        handler.removeCallbacks(waveformTick)
-        handler.removeCallbacks(clockTick)
+        unbindService(connection)
     }
 
-    private fun advanceOneSecond() {
-        elapsedSeconds++
-        binding.textElapsed.text = formatMinutesSeconds(elapsedSeconds)
-
-        when (phase) {
-            Phase.SETTLING -> {
-                waitSecondsLeft--
-                if (waitSecondsLeft <= 0) phase = Phase.MONITORING
-            }
-            Phase.MONITORING -> {
-                // Occasionally simulate a threshold crossing to demo the RECORDING phase.
-                if (random.nextInt(100) < 20) {
-                    phase = Phase.RECORDING
-                    recordingPhaseTicksLeft = 3 + random.nextInt(4)
-                }
-            }
-            Phase.RECORDING -> {
-                recordingPhaseTicksLeft--
-                if (recordingPhaseTicksLeft <= 0) phase = Phase.MONITORING
-            }
-        }
-        updateStatusText()
-    }
-
-    private fun updateStatusText() {
-        binding.textStatus.text = when (phase) {
+    private fun render(state: RecordingUiState) {
+        binding.textStatus.text = when (state.phase) {
+            Phase.LOADING_MODEL -> getString(R.string.recording_status_loading)
             Phase.SETTLING -> getString(
                 R.string.recording_status_settling_countdown,
-                formatMinutesSeconds(waitSecondsLeft),
+                formatMinutesSeconds(state.settlingSecondsLeft),
             )
             Phase.MONITORING -> getString(R.string.recording_status_monitoring)
             Phase.RECORDING -> getString(R.string.recording_status_recording)
         }
-    }
+        binding.textElapsed.text = formatMinutesSeconds(state.elapsedSeconds)
+        binding.textClipsSaved.text = getString(R.string.recording_clips_saved, state.clipsSavedThisSession)
 
-    private fun pushWaveformSample() {
-        val amplitude = when (phase) {
-            Phase.SETTLING, Phase.MONITORING -> random.nextFloat() * 0.15f // quiet/ambient
-            Phase.RECORDING -> 0.4f + random.nextFloat() * 0.6f // above-threshold
+        // No sound/vibration here on purpose — the person using this screen is
+        // asleep. A silent toast (only relevant while the screen happens to be
+        // open) plus the always-updated counter above is the feedback.
+        if (state.clipsSavedThisSession > lastClipsSaved) {
+            Toast.makeText(this, R.string.recording_clip_saved_toast, Toast.LENGTH_SHORT).show()
         }
-        liveSamples.addLast(amplitude)
+        lastClipsSaved = state.clipsSavedThisSession
+
+        liveSamples.addLast(state.liveAmplitude.coerceIn(0f, 1f))
         while (liveSamples.size > LIVE_SAMPLE_WINDOW) liveSamples.removeFirst()
         binding.waveformLive.samples = liveSamples.toList()
     }
@@ -124,13 +90,6 @@ class RecordingActivity : AppCompatActivity() {
     }
 
     companion object {
-        const val DEFAULT_WAIT_MINUTES = 15
-        private const val EXTRA_WAIT_MINUTES = "extra_wait_minutes"
-        private const val WAVEFORM_TICK_MILLIS = 150L
         private const val LIVE_SAMPLE_WINDOW = 40
-
-        fun newIntent(context: Context, waitMinutes: Int): Intent =
-            Intent(context, RecordingActivity::class.java)
-                .putExtra(EXTRA_WAIT_MINUTES, waitMinutes)
     }
 }

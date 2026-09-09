@@ -24,6 +24,9 @@ local.properties
 app/src/main/assets/vosk-model-*/
 tests/models/
 
+# Room schema export
+app/schemas/
+
 # Python (uv)
 */__pycache__/
 .venv/
