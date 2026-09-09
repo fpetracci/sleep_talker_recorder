@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Sleep Talker</string>
+
+    <!-- Home -->
+    <string name="home_old_recordings">Old recordings</string>
+    <string name="home_no_recordings_yet">No recordings yet</string>
+    <string name="home_wait_time_label">Wait time</string>
+    <string name="home_wait_time_hint">Minutes</string>
+    <string name="home_wait_time_unit">min</string>
+    <string name="home_wait_time_default">15</string>
+    <string name="home_start">Start</string>
+
+    <!-- Recording -->
+    <string name="recording_status_loading">Preparing…</string>
+    <string name="recording_status_settling">Settling</string>
+    <string name="recording_status_settling_countdown">Settling — %s remaining</string>
+    <string name="recording_status_monitoring">Monitoring</string>
+    <string name="recording_status_recording">Recording</string>
+    <string name="recording_elapsed_default">00:00</string>
+    <string name="recording_stop">Stop</string>
+    <string name="recording_permission_denied">Microphone permission is required to record</string>
+    <string name="recording_clips_saved">%d clip(s) saved</string>
+    <string name="recording_clip_saved_toast">Clip saved</string>
+    <string name="notification_channel_name">Sleep recording</string>
+    <string name="notification_clips_saved">%1$s — %2$d saved</string>
+
+    <!-- Playback -->
+    <string name="playback_play">Play</string>
+    <string name="playback_pause">Pause</string>
+    <string name="playback_transcript_label">Transcript</string>
+    <string name="playback_unavailable">Playback unavailable for this clip</string>
+    <string name="playback_volume_boost_icon">🔊</string>
+    <string name="playback_volume_quiet_icon">🔈</string>
+    <string name="playback_share">Share</string>
+    <string name="playback_share_chooser_title">Share recording</string>
+    <string name="playback_share_unavailable">Nothing to share for this clip</string>
+</resources>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Volume boost slider: 0-100 is plain attenuation (MediaPlayer volume),
+         100-200 is amplification above unity gain (LoudnessEnhancer, up to +20dB). -->
+    <integer name="playback_volume_boost_max">200</integer>
+    <integer name="playback_volume_boost_default">100</integer>
+</resources>

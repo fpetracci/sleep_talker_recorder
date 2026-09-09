@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Real recordings, written by RecordingService to filesDir/recordings/. -->
+    <files-path name="recordings" path="recordings/" />
+    <!-- Demo asset clips are copied here before sharing (assets can't be shared directly). -->
+    <cache-path name="shared" path="shared/" />
+</paths>

@@ -1,0 +1,11 @@
+[project]
+name = "sleep-talker-tests"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [    
+    "vosk>=0.3.45",
+    "pytest>=8.3.3",
+    ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
