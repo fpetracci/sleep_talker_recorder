@@ -39,9 +39,29 @@ def vosk_model():
 
 
 @pytest.fixture(scope="session")
-def sample_wav(tmp_path_factory):
+def talking_wav(tmp_path_factory):
     src = SAMPLES_DIR / "test_sample.mp4"
     assert src.exists(), f"Sample file missing: {src}"
     dst = tmp_path_factory.mktemp("audio") / "test_sample.wav"
+    convert_to_wav(src, dst)
+    return dst
+
+
+@pytest.fixture(scope="session")
+def humming_wav(tmp_path_factory):
+    """Humming: no words — the app should NOT save this clip."""
+    src = SAMPLES_DIR / "sample_humming.m4a"
+    assert src.exists(), f"Sample file missing: {src}"
+    dst = tmp_path_factory.mktemp("audio") / "sample_humming.wav"
+    convert_to_wav(src, dst)
+    return dst
+
+
+@pytest.fixture(scope="session")
+def coughing_wav(tmp_path_factory):
+    """Coughing: no words — the app should NOT save this clip."""
+    src = SAMPLES_DIR / "sample_coughin.m4a"
+    assert src.exists(), f"Sample file missing: {src}"
+    dst = tmp_path_factory.mktemp("audio") / "sample_coughin.wav"
     convert_to_wav(src, dst)
     return dst

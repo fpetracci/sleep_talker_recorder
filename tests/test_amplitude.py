@@ -20,13 +20,13 @@ def compute_rms(wav_path: str) -> float:
 
 
 class TestAmplitude:
-    def test_sample_has_nonzero_amplitude(self, sample_wav):
-        rms = compute_rms(str(sample_wav))
+    def test_sample_has_nonzero_amplitude(self, talking_wav):
+        rms = compute_rms(str(talking_wav))
         assert rms > 0.0, "RMS should be positive for a non-silent recording"
 
-    def test_sample_amplitude_above_silence_floor(self, sample_wav):
+    def test_sample_amplitude_above_silence_floor(self, talking_wav):
         """A recording with speech should be well above the noise floor."""
-        rms = compute_rms(str(sample_wav))
+        rms = compute_rms(str(talking_wav))
         assert rms > 0.01, (
             f"RMS {rms:.4f} is suspiciously low — "
             "audio might be silent or conversion failed"
